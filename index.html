@@ -3,13 +3,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f2f2f2">
     <title>Neon - Agar - Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #f2f2f2; font-family: 'Ubuntu', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700;900&display=swap');
+        
+        body { 
+          margin: 0; 
+          overflow: hidden; 
+          background-color: #f2f2f2; 
+          font-family: 'Ubuntu', sans-serif;
+          touch-action: none;
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
         #root { width: 100vw; height: 100vh; }
-        canvas { display: block; cursor: crosshair; }
+        canvas { display: block; cursor: crosshair; touch-action: none; }
+        
+        /* Otimização de Safe Area para Celulares com Notch */
+        .safe-top { padding-top: env(safe-area-inset-top); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .safe-left { padding-left: env(safe-area-inset-left); }
+        .safe-right { padding-right: env(safe-area-inset-right); }
+
+        /* Animações de Overlay */
+        @keyframes overlayShow {
+          from { opacity: 0; backdrop-filter: blur(0px); }
+          to { opacity: 1; backdrop-filter: blur(12px); }
+        }
+        .animate-overlay { animation: overlayShow 0.3s ease-out forwards; }
     </style>
 <script type="importmap">
 {

@@ -9,8 +9,9 @@ interface GameCanvasProps {
   playerId: string;
   playerName: string;
   onDie: (stats: { mass: number }) => void;
-  onExit: () => void;
+  onTogglePause: () => void;
   spectateMode?: boolean;
+  isPaused?: boolean;
 }
 
 interface VisualState {
@@ -19,7 +20,7 @@ interface VisualState {
   radius: number;
 }
 
-const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, onExit, spectateMode }) => {
+const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, onTogglePause, spectateMode, isPaused }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentMass, setCurrentMass] = useState(0);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -51,7 +52,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, on
     ctx.strokeStyle = VIRUS_BORDER;
     ctx.lineWidth = radius * 0.08;
     ctx.stroke();
-    // Brilho para indicar interatividade
     ctx.shadowColor = VIRUS_COLOR;
     ctx.shadowBlur = 10;
     ctx.stroke();
@@ -152,7 +152,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, on
       });
     });
 
-    // Render Viruses on top of small cells for correct visibility
     state.viruses.forEach(v => drawVirus(ctx, v.x, v.y, v.radius));
 
     const currentCellIds = new Set(Object.values(state.players).flatMap(cells => cells.map(c => c.id)));
@@ -186,38 +185,52 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, on
   }, [render]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (spectateMode || !playerId) return;
+    const handleInput = (clientX: number, clientY: number) => {
+      if (spectateMode || !playerId || isPaused) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const worldX = (e.clientX - canvas.width / 2) / camera.current.zoom + camera.current.x;
-      const worldY = (e.clientY - canvas.height / 2) / camera.current.zoom + camera.current.y;
+      const worldX = (clientX - canvas.width / 2) / camera.current.zoom + camera.current.x;
+      const worldY = (clientY - canvas.height / 2) / camera.current.zoom + camera.current.y;
       server.handleInput(playerId, worldX, worldY);
+    };
+
+    const onMouseMove = (e: MouseEvent) => handleInput(e.clientX, e.clientY);
+    
+    const onTouch = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        handleInput(touch.clientX, touch.clientY);
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Escape') {
-        onExit();
+        onTogglePause();
         return;
       }
-      if (spectateMode || !playerId) return;
+      if (spectateMode || !playerId || isPaused) return;
       if (e.code === 'Space') server.handleSplit(playerId);
       if (e.code === 'KeyW') server.handleEject(playerId);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('touchstart', onTouch, { passive: false });
+    window.addEventListener('touchmove', onTouch, { passive: false });
     window.addEventListener('keydown', handleKeyDown);
+    
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('touchstart', onTouch);
+      window.removeEventListener('touchmove', onTouch);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [playerId, spectateMode, onExit]);
+  }, [playerId, spectateMode, onTogglePause, isPaused]);
 
   return (
-    <div className="relative w-full h-full bg-[#f2f2f2]">
+    <div className="relative w-full h-full bg-[#f2f2f2] overflow-hidden">
       <canvas ref={canvasRef} />
       {spectateMode && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full font-bold animate-pulse uppercase tracking-widest text-xs border border-white/10 select-none">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full font-bold animate-pulse uppercase tracking-widest text-[10px] sm:text-xs border border-white/10 select-none">
           Modo Espectador
         </div>
       )}
@@ -226,7 +239,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ playerId, playerName, onDie, on
         leaderboard={leaderboard} 
         playerName={playerName} 
         gameState={server.getState()} 
-        playerId={playerId} 
+        playerId={playerId}
+        onTogglePause={onTogglePause}
       />
     </div>
   );
