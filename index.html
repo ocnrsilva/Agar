@@ -26,13 +26,13 @@
         #root { width: 100vw; height: 100vh; }
         canvas { display: block; cursor: crosshair; touch-action: none; }
         
-        /* Otimização de Safe Area para Celulares com Notch */
+        /* Otimização de Safe Area */
         .safe-top { padding-top: env(safe-area-inset-top); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .safe-left { padding-left: env(safe-area-inset-left); }
         .safe-right { padding-right: env(safe-area-inset-right); }
 
-        /* Animações de Overlay */
+        /* Animações */
         @keyframes overlayShow {
           from { opacity: 0; backdrop-filter: blur(0px); }
           to { opacity: 1; backdrop-filter: blur(12px); }
@@ -43,13 +43,17 @@
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
 </head>
 <body>
     <div id="root"></div>
+    <!-- Ponto de entrada crucial para carregar o jogo -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
