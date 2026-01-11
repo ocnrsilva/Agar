@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="1200" height="475" alt="Neon Agar Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img width="1200" height="475" alt="Neon Agar Banner" src="https://github.com/ocnrsilva/Imagens/blob/556a3aa8fea68cacea635dcd765fb30fd5b8fcc1/BannerAIO.png" />
 </div>
 
 <h1 align="center">🎮 Neon – Agar</h1>
