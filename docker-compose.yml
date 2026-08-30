@@ -1,0 +1,11 @@
+services:
+  neon-agar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neon-agar-game
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    environment:
+      - NODE_ENV=production

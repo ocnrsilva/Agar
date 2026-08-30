@@ -3,14 +3,33 @@ import React, { useState } from 'react';
 import GameCanvas from './components/GameCanvas';
 import { server } from './services/GameServer';
 
+/**
+ * COMPONENTE RAIZ DA APLICAÇÃO (App)
+ * Gerencia o estado global de navegação (menu, jogando, espectador),
+ * inicialização de sessões de jogadores, pausamento e modais de fim de jogo.
+ */
 const App: React.FC = () => {
+  // Estado do fluxo principal do jogo: 'menu' (menu inicial), 'playing' (jogando) ou 'spectating' (espectador)
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'spectating'>('menu');
+  
+  // Controle de estado de derrota do jogador
   const [isDead, setIsDead] = useState(false);
+  
+  // Controle do menu de pause
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Nickname digitado pelo jogador
   const [playerName, setPlayerName] = useState('');
+  
+  // ID único gerado para o jogador na sessão atual
   const [playerId, setPlayerId] = useState('');
+  
+  // Estatísticas do jogador ao ser eliminado (ex: massa máxima atingida)
   const [stats, setStats] = useState({ mass: 0 });
 
+  /**
+   * Inicia a partida do jogador: cria ID aleatório, adiciona no servidor e altera tela para 'playing'.
+   */
   const handlePlay = () => {
     const id = Math.random().toString(36).substr(2, 9);
     setPlayerId(id);
@@ -20,12 +39,18 @@ const App: React.FC = () => {
     setGameState('playing');
   };
 
+  /**
+   * Inicia o modo de espectador para observar os maiores jogadores da sala sem entrar como célula.
+   */
   const handleSpectate = () => {
     setIsDead(false);
     setIsPaused(false);
     setGameState('spectating');
   };
 
+  /**
+   * Trata a eliminação do jogador (Game Over), guardando estatísticas e exibindo a tela de derrota.
+   */
   const handleDie = (finalStats: { mass: number }) => {
     setStats(finalStats);
     setIsDead(true);
@@ -33,6 +58,9 @@ const App: React.FC = () => {
     setGameState('spectating'); 
   };
 
+  /**
+   * Alterna o estado de pause do jogo.
+   */
   const togglePause = () => {
     if (gameState === 'playing' && !isDead) {
       setIsPaused(prev => !prev);
@@ -41,6 +69,9 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Desconecta o jogador da partida e retorna ao menu principal.
+   */
   const handleExit = () => {
     if (playerId) {
       server.removePlayer(playerId);
@@ -52,6 +83,7 @@ const App: React.FC = () => {
 
   return (
     <div className="w-full h-full bg-[#f2f2f2] flex items-center justify-center overflow-hidden">
+      {/* --- TELA DE MENU INICIAL --- */}
       {gameState === 'menu' && (
         <div className="bg-white p-8 sm:p-10 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] w-full max-w-sm sm:max-w-md border-t-[12px] border-blue-600 animate-in fade-in zoom-in duration-500 mx-4">
           <div className="text-center mb-10">
@@ -62,6 +94,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="space-y-4">
+            {/* Campo de Entrada do Nickname */}
             <div className="relative">
               <input
                 type="text"
@@ -74,6 +107,7 @@ const App: React.FC = () => {
               />
             </div>
             
+            {/* Botão para Iniciar Jogo */}
             <button
               onClick={handlePlay}
               className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-black text-2xl py-5 rounded-[24px] shadow-2xl shadow-blue-200 transition-all uppercase tracking-tight"
@@ -81,6 +115,7 @@ const App: React.FC = () => {
               Começar
             </button>
 
+            {/* Botão para Modo Espectador */}
             <button
               onClick={handleSpectate}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-lg py-4 rounded-[24px] transition-all uppercase tracking-tight active:scale-[0.98]"
@@ -89,6 +124,7 @@ const App: React.FC = () => {
             </button>
           </div>
 
+          {/* Dicas de Atalhos de Teclado */}
           <div className="mt-8 flex justify-center gap-3 text-[9px] font-black text-gray-400 uppercase tracking-widest opacity-40">
              <span>Space: Dividir</span>
              <span>•</span>
@@ -97,6 +133,7 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* --- TELA PRINCIPAL DE JOGO / ESPECTADOR --- */}
       {(gameState === 'playing' || gameState === 'spectating') && (
         <div className="w-full h-full relative">
           <GameCanvas 
@@ -108,7 +145,7 @@ const App: React.FC = () => {
             isPaused={isPaused}
           />
           
-          {/* Overlay de Pause (Modern App Style) */}
+          {/* Modal de Pause */}
           {isPaused && !isDead && (
             <div className="absolute inset-0 flex items-center justify-center z-50 animate-overlay bg-black/50">
               <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-[320px] text-center border-t-[12px] border-blue-500 animate-in zoom-in duration-300 mx-4">
@@ -133,7 +170,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Overlay de Morte */}
+          {/* Modal de Derrota (Game Over) */}
           {isDead && (
             <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none animate-overlay bg-black/30">
               <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-[320px] text-center border-t-[12px] border-red-500 animate-in slide-in-from-bottom-20 duration-500 pointer-events-auto mx-4">
@@ -163,6 +200,7 @@ const App: React.FC = () => {
             </div>
           )}
 
+          {/* Botão de Sair rápido no Modo Espectador */}
           {gameState === 'spectating' && !isDead && (
             <button 
               onClick={handleExit}
@@ -178,3 +216,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

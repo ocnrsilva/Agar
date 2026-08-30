@@ -3,28 +3,37 @@ import React, { useState, useEffect } from 'react';
 import { LeaderboardEntry, GameState } from '../types';
 import { server } from '../services/GameServer';
 
+/**
+ * Propriedades do componente UIOverlay
+ */
 interface UIOverlayProps {
-  mass: number;
-  leaderboard: LeaderboardEntry[];
-  playerName: string;
-  gameState: GameState;
-  playerId: string;
-  onTogglePause: () => void;
+  mass: number;                      // Massa acumulada atual do jogador
+  leaderboard: LeaderboardEntry[];   // Lista dos 10 melhores jogadores no ranking
+  playerName: string;                // Nome do jogador para destacar no ranking
+  gameState: GameState;              // Estado atual do mapa/servidor
+  playerId: string;                  // ID único do jogador local
+  onTogglePause: () => void;         // Função para abrir/fechar o menu de pause
 }
 
+/**
+ * COMPONENTE DE INTERFACE DO JOGO (HUD Overlay).
+ * Renderiza elementos visuais sobre o canvas: botão de pause, placar de líderes,
+ * minimapa, pontuação de massa atual e botões de controle para telas sensíveis ao toque.
+ */
 const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, gameState, playerId, onTogglePause }) => {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const myCells = gameState.players[playerId] || [];
   const mapW = gameState.mapWidth;
   const mapH = gameState.mapHeight;
 
+  // Detecta se o dispositivo possui suporte a tela de toque (Smartphones/Tablets)
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
   }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0 select-none text-white font-sans overflow-hidden safe-top safe-left safe-right safe-bottom">
-      {/* Botão de Pause (Alternativa ESC para Mobile) */}
+      {/* Botão de Pause (Alternativa ESC para Mobile e atalho rápido) */}
       <div className="absolute top-4 left-4 pointer-events-auto">
         <button 
           onClick={(e) => { e.stopPropagation(); onTogglePause(); }}
@@ -41,7 +50,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, ga
         </button>
       </div>
 
-      {/* Leaderboard - Responsivo */}
+      {/* Leaderboard / Ranking dos Top 10 Jogadores */}
       <div className="absolute top-4 right-4 w-36 sm:w-52 bg-black/40 p-3 sm:p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-2xl">
         <h2 className="text-xs sm:text-lg font-black mb-1 sm:mb-2 text-center border-b border-white/20 pb-1 uppercase tracking-tighter">Ranking</h2>
         <ol className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-sm font-bold">
@@ -56,7 +65,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, ga
         </ol>
       </div>
 
-      {/* Minimap - Escondido em telas muito pequenas */}
+      {/* Minimapa - Exibe a localização proporcional das células do jogador no mundo */}
       <div className="hidden md:block absolute bottom-6 right-6 w-40 h-40 bg-black/30 rounded-xl border border-white/10 overflow-hidden backdrop-blur-xs shadow-inner">
          {myCells.map(c => (
            <div 
@@ -71,13 +80,13 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, ga
          ))}
       </div>
 
-      {/* Score / Massa Atual */}
+      {/* Indicador de Massa / Pontuação Atual */}
       <div className="absolute bottom-6 left-6 bg-black/40 px-5 py-2.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl">
         <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Massa</p>
         <span className="text-2xl sm:text-4xl font-black tracking-tighter leading-none">{Math.floor(mass)}</span>
       </div>
 
-      {/* Controles Mobile (Split e Eject) */}
+      {/* Controles Virtuais Touchscreen (Split e Eject de Massa) para Mobile */}
       {isTouchDevice && (
         <div className="absolute bottom-10 right-6 flex flex-col gap-6 pointer-events-auto">
           <button 
@@ -95,7 +104,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, ga
         </div>
       )}
 
-      {/* Info de Atalhos para Desktop */}
+      {/* Dicas de Atalhos Teclado para Computadores */}
       {!isTouchDevice && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-4 opacity-40 hover:opacity-100 transition-opacity">
           <span className="bg-black/40 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/5">SPACE: SPLIT</span>
@@ -107,3 +116,4 @@ const UIOverlay: React.FC<UIOverlayProps> = ({ mass, leaderboard, playerName, ga
 };
 
 export default UIOverlay;
+

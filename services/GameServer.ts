@@ -10,7 +10,13 @@ import {
   TICK_RATE, VIRUS_MAX_MASS, SKINS, TARGET_BOT_COUNT, BOT_NAMES, MAP_GROWTH_PER_PLAYER
 } from '../constants';
 
+/**
+ * SERVIDOR DE JOGO AUTORITATIVO (SIMULADOR LOCAL)
+ * Responsável pelo loop principal de física, gerenciamento de entidades,
+ * inteligência artificial de bots, detecção de colisões e lógica de combate.
+ */
 export class GameServer {
+  // Estado interno sincronizado do mundo
   private state: GameState = {
     players: {},
     pellets: [],
@@ -20,6 +26,7 @@ export class GameServer {
     mapHeight: INITIAL_MAP_SIZE
   };
 
+  // Marcação de tempo da última atualização para cálculo do Delta Time (dt)
   private lastTick = Date.now();
 
   constructor() {
@@ -27,12 +34,18 @@ export class GameServer {
     this.startLoop();
   }
 
+  /**
+   * Inicializa o ambiente do jogo configurando o mapa, populando bots e entidades.
+   */
   private initWorld() {
     this.updateMapSize();
     this.ensureBots();
     this.refillEntities();
   }
 
+  /**
+   * Ajusta dinamicamente a dimensão do mapa com base na quantidade de jogadores conectados.
+   */
   private updateMapSize() {
     const playerCount = Object.keys(this.state.players).length;
     const newSize = INITIAL_MAP_SIZE + (playerCount * MAP_GROWTH_PER_PLAYER);
@@ -40,6 +53,9 @@ export class GameServer {
     this.state.mapHeight = newSize;
   }
 
+  /**
+   * Repõe a quantidade de comidas (pellets) e vírus no mapa caso estejam abaixo do limite.
+   */
   private refillEntities() {
     const targetPellets = Math.floor(PELLET_BASE_COUNT * (this.state.mapWidth / INITIAL_MAP_SIZE));
     const targetViruses = Math.floor(VIRUS_BASE_COUNT * (this.state.mapWidth / INITIAL_MAP_SIZE));
@@ -48,6 +64,9 @@ export class GameServer {
     while (this.state.viruses.length < targetViruses) this.spawnVirus();
   }
 
+  /**
+   * Garante que a sala contenha a quantidade exata de bots configurada (TARGET_BOT_COUNT).
+   */
   private ensureBots() {
     const currentBots = Object.keys(this.state.players).filter(id => id.startsWith('bot_')).length;
     for (let i = currentBots; i < TARGET_BOT_COUNT; i++) {
@@ -57,6 +76,9 @@ export class GameServer {
     }
   }
 
+  /**
+   * Gera uma nova bolinha de comida (Pellet) em posição aleatória no mapa.
+   */
   private spawnPellet() {
     this.state.pellets.push({
       id: Math.random().toString(36).substr(2, 9),
@@ -68,6 +90,9 @@ export class GameServer {
     });
   }
 
+  /**
+   * Gera um novo Vírus verde no mapa em posição aleatória ou coordenada específica.
+   */
   private spawnVirus(x?: number, y?: number) {
     const mass = 100;
     this.state.viruses.push({
@@ -80,8 +105,12 @@ export class GameServer {
     });
   }
 
+  /**
+   * Adiciona um novo jogador (ou bot) à partida e define sua cor/skin com base no nome.
+   */
   public addPlayer(id: string, name: string) {
     const lowerName = name.toLowerCase();
+    // Aplica a skin personalizada se houver palavra-chave, ou escolhe cor aleatória
     const color = SKINS[lowerName] || COLORS[Math.floor(Math.random() * COLORS.length)];
     const margin = 200;
     const x = Math.random() * (this.state.mapWidth - margin * 2) + margin;
@@ -105,11 +134,17 @@ export class GameServer {
     this.updateMapSize();
   }
 
+  /**
+   * Remove um jogador da partida ao sair ou ser completamente eliminado.
+   */
   public removePlayer(id: string) {
     delete this.state.players[id];
     this.updateMapSize();
   }
 
+  /**
+   * Atualiza as coordenadas para onde as células do jogador devem se mover (cursor/touch).
+   */
   public handleInput(playerId: string, targetX: number, targetY: number) {
     const cells = this.state.players[playerId];
     if (!cells) return;
@@ -119,6 +154,10 @@ export class GameServer {
     });
   }
 
+  /**
+   * Executa a mecânica de Divisão (Split - Tecla Espaço):
+   * Divide as células elegíveis do jogador ao meio e aplica um impulso na direção do alvo.
+   */
   public handleSplit(playerId: string) {
     const cells = this.state.players[playerId];
     if (!cells || cells.length >= MAX_CELLS) return;
@@ -132,18 +171,20 @@ export class GameServer {
         cell.mass = halfMass;
         cell.radius = getRadius(halfMass);
 
+        // Calcula vetor unitário em direção ao alvo
         const dx = cell.targetX - cell.x;
         const dy = cell.targetY - cell.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         const ux = dx / dist;
         const uy = dy / dist;
 
+        // Cria nova célula impulsionada para frente
         const newCell: PlayerCell = {
           ...cell,
           id: Math.random().toString(36).substr(2, 9),
           mass: halfMass,
           radius: getRadius(halfMass),
-          vx: ux * 75, 
+          vx: ux * 75, // Força do impulso da divisão
           vy: uy * 75,
           lastSplitTime: now
         };
@@ -157,6 +198,10 @@ export class GameServer {
     this.state.players[playerId] = [...cells, ...newCells];
   }
 
+  /**
+   * Executa a mecânica de Ejeção de Massa (Tecla W):
+   * Dispara uma pequena bolinha de massa na direção do cursor do jogador.
+   */
   public handleEject(playerId: string) {
     const cells = this.state.players[playerId];
     if (!cells) return;
@@ -177,7 +222,7 @@ export class GameServer {
           playerId,
           x: cell.x + ux * (cell.radius + 15),
           y: cell.y + uy * (cell.radius + 15),
-          vx: ux * 30,
+          vx: ux * 30, // Velocidade inicial do disparo de massa
           vy: uy * 30,
           mass: EJECT_MASS_VALUE,
           radius: getRadius(EJECT_MASS_VALUE),
@@ -187,6 +232,9 @@ export class GameServer {
     });
   }
 
+  /**
+   * Inicia o loop continuo do servidor (TICK_RATE = 60 quadros/segundo).
+   */
   private startLoop() {
     setInterval(() => {
       const now = Date.now();
@@ -196,11 +244,15 @@ export class GameServer {
     }, 1000 / TICK_RATE);
   }
 
+  /**
+   * LOOP PRINCIPAL DE SIMULAÇÃO (Physics, Decaimento de Massa, Colisões, IA e Combates).
+   */
   private update(dt: number) {
     const now = Date.now();
     this.ensureBots();
     this.refillEntities();
 
+    // 1. Atualização e movimentação das células dos jogadores
     Object.keys(this.state.players).forEach(pId => {
       const cells = this.state.players[pId];
       if (!cells || cells.length === 0) {
@@ -208,11 +260,13 @@ export class GameServer {
         return;
       }
 
+      // Executa lógica de inteligência artificial se for um bot
       if (pId.startsWith('bot_')) {
         this.runBotAI(pId, cells);
       }
 
       cells.forEach(cell => {
+        // Desaceleração gradual do impulso (fricção)
         cell.vx *= 0.93;
         cell.vy *= 0.93;
 
@@ -231,13 +285,16 @@ export class GameServer {
           cell.y += cell.vy;
         }
 
+        // Restrição dentro das bordas do mapa
         cell.x = Math.max(cell.radius, Math.min(this.state.mapWidth - cell.radius, cell.x));
         cell.y = Math.max(cell.radius, Math.min(this.state.mapHeight - cell.radius, cell.y));
 
+        // Decaimento natural de massa contínuo
         cell.mass *= (1 - 0.00012 * dt);
         cell.radius = getRadius(cell.mass);
       });
 
+      // 2. Colisão e Fusão entre células do PRÓPRIO jogador
       for (let i = 0; i < cells.length; i++) {
         for (let j = i + 1; j < cells.length; j++) {
           const c1 = cells[i], c2 = cells[j];
@@ -245,11 +302,13 @@ export class GameServer {
           const d = Math.sqrt(dx * dx + dy * dy) || 1;
           const minDist = c1.radius + c2.radius;
           
+          // Tempo de recarga para poder re-fundir as células (aumenta com a massa)
           const cooldown1 = 14000 + (c1.mass * 20);
           const cooldown2 = 14000 + (c2.mass * 20);
           const canMerge = now - c1.lastSplitTime > cooldown1 && now - c2.lastSplitTime > cooldown2;
 
           if (canMerge) {
+            // Fusão de células
             if (d < Math.max(c1.radius, c2.radius) * 0.9) {
               c1.mass += c2.mass;
               c1.radius = getRadius(c1.mass);
@@ -258,6 +317,7 @@ export class GameServer {
               j--;
             }
           } else if (d < minDist) {
+            // Empurrão de física (impede que fiquem sobrepostas antes da hora de fundir)
             const overlap = (minDist - d) * 0.07;
             const ux = dx / d, uy = dy / d;
             c1.x -= ux * overlap;
@@ -269,6 +329,7 @@ export class GameServer {
       }
     });
 
+    // 3. Atualização de Massas Ejetadas e Alimentação de Vírus
     this.state.ejectedMasses = this.state.ejectedMasses.filter(m => {
       m.vx *= 0.96; m.vy *= 0.96;
       m.x += m.vx; m.y += m.vy;
@@ -276,6 +337,7 @@ export class GameServer {
         const d = Math.hypot(m.x - v.x, m.y - v.y);
         if (d < v.radius) {
           v.mass += m.mass; v.radius = getRadius(v.mass);
+          // Se o vírus absorver massa suficiente, ele lança um novo vírus
           if (v.mass > VIRUS_MAX_MASS) {
             v.mass = 100; v.radius = getRadius(v.mass);
             this.spawnVirus(v.x + m.vx * 15, v.y + m.vy * 15);
@@ -286,8 +348,10 @@ export class GameServer {
       return Math.abs(m.vx) > 0.1 && m.x > 0 && m.x < this.state.mapWidth && m.y > 0 && m.y < this.state.mapHeight;
     });
 
+    // 4. Absorção de comidas (Pellets) e colisão com Vírus
     Object.values(this.state.players).forEach(cells => {
       cells.forEach(cell => {
+        // Comer Pellets
         this.state.pellets = this.state.pellets.filter(p => {
           if (Math.abs(cell.x - p.x) < cell.radius && Math.abs(cell.y - p.y) < cell.radius) {
             if (Math.hypot(cell.x - p.x, cell.y - p.y) < cell.radius) {
@@ -298,17 +362,18 @@ export class GameServer {
           return true;
         });
 
+        // Interação com Vírus
         this.state.viruses = this.state.viruses.filter(v => {
           const dist = Math.hypot(cell.x - v.x, cell.y - v.y);
           // Detecção de colisão aprimorada: se a célula encostar na borda do vírus
           if (dist < cell.radius) {
             if (cell.mass > v.mass * 1.15) {
-              // Regra de estouro
+              // Regra de estouro ao tocar vírus maior que o vírus
               if (cells.length < MAX_CELLS) {
                 this.explodeCell(cell.playerId, cell);
                 return false; // Remove vírus
               } else {
-                // Se já estiver dividido ao máximo, apenas come o vírus
+                // Se já estiver dividido ao máximo, apenas come o vírus sem estourar
                 cell.mass += v.mass / 2;
                 cell.radius = getRadius(cell.mass);
                 return false; // Remove vírus
@@ -320,6 +385,7 @@ export class GameServer {
       });
     });
 
+    // 5. Combate entre JOGADORES DIFERENTES (Sistemas de Predação/Comer outro jogador)
     const ids = Object.keys(this.state.players);
     for (let i = 0; i < ids.length; i++) {
       for (let j = 0; j < ids.length; j++) {
@@ -330,6 +396,7 @@ export class GameServer {
           for (let b = 0; b < p2.length; b++) {
             const c1 = p1[a], c2 = p2[b];
             const d = Math.hypot(c1.x - c2.x, c1.y - c2.y);
+            // Regra de proporção: Precisa ter pelo menos 20% mais massa e engolir a maior parte
             if (d < c1.radius * 0.8 && c1.mass > c2.mass * 1.2) {
               c1.mass += c2.mass; c1.radius = getRadius(c1.mass);
               p2.splice(b, 1); b--;
@@ -341,12 +408,17 @@ export class GameServer {
     }
   }
 
+  /**
+   * LÓGICA DE INTELIGÊNCIA ARTIFICIAL DOS BOTS:
+   * Calcula vetores de repulsão de inimigos maiores, perseguição de presas e coleta de pellets.
+   */
   private runBotAI(botId: string, cells: PlayerCell[]) {
     if (cells.length === 0) return;
     const head = cells[0];
     let forceX = 0;
     let forceY = 0;
 
+    // Fuga de inimigos maiores próximos
     Object.entries(this.state.players).forEach(([otherId, otherCells]) => {
       if (otherId === botId) return;
       otherCells.forEach(enemy => {
@@ -359,6 +431,7 @@ export class GameServer {
       });
     });
 
+    // Busca de alvos menores (presas)
     let target = { x: head.x, y: head.y, weight: 0 };
     Object.entries(this.state.players).forEach(([otherId, otherCells]) => {
       if (otherId === botId) return;
@@ -371,6 +444,7 @@ export class GameServer {
       });
     });
 
+    // Se não houver presas por perto, buscar comida simples (pellets)
     if (target.weight < 0.2) {
       this.state.pellets.slice(0, 10).forEach(p => {
         const d = Math.hypot(p.x - head.x, p.y - head.y);
@@ -384,6 +458,7 @@ export class GameServer {
       forceY += (target.y - head.y) * target.weight;
     }
 
+    // Repulsão das bordas do mapa para não ficarem travados no canto
     const wallRepulsion = 800;
     if (head.x < 300) forceX += wallRepulsion;
     if (head.x > this.state.mapWidth - 300) forceX -= wallRepulsion;
@@ -393,6 +468,9 @@ export class GameServer {
     this.handleInput(botId, head.x + forceX, head.y + forceY);
   }
 
+  /**
+   * Estoura a célula do jogador em pedaços menores após atingir um vírus.
+   */
   private explodeCell(playerId: string, cell: PlayerCell) {
     const cells = this.state.players[playerId];
     if (!cells) return;
@@ -410,7 +488,12 @@ export class GameServer {
     }
   }
 
+  /**
+   * Retorna o estado completo atual do jogo para renderização na interface.
+   */
   public getState() { return this.state; }
 }
 
+// Instância singleton do servidor do jogo
 export const server = new GameServer();
+
