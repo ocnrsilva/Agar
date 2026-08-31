@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <!-- Gradiente Principal da Célula Neon -->
+    <linearGradient id="neonGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+
+    <!-- Gradiente de Brilho / Highlight -->
+    <linearGradient id="glowGrad" x1="16" y1="12" x2="36" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Gradiente para Partículas Menores -->
+    <linearGradient id="foodGrad1" x1="44" y1="10" x2="56" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+
+    <linearGradient id="foodGrad2" x1="8" y1="42" x2="18" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+
+    <!-- Efeito de Sombra / Brilho Neon -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#2563eb" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Partículas menores ao redor (Agar Pellets) -->
+  <circle cx="50" cy="16" r="6" fill="url(#foodGrad1)"/>
+  <circle cx="13" cy="47" r="5" fill="url(#foodGrad2)"/>
+  <circle cx="53" cy="46" r="4" fill="#fbbf24"/>
+
+  <!-- Célula Principal Neon -->
+  <circle cx="31" cy="33" r="23" fill="url(#neonGrad)" stroke="#60a5fa" stroke-width="2.5" filter="url(#neonGlow)"/>
+
+  <!-- Reflexo Superior de Vidro / Brilho -->
+  <ellipse cx="25" cy="22" rx="10" ry="5.5" transform="rotate(-25 25 22)" fill="url(#glowGrad)"/>
+
+  <!-- Letra 'N' central com estilo futurista / neon -->
+  <path d="M23 43 V23 L39 43 V23" stroke="#ffffff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
